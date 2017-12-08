@@ -1,0 +1,21 @@
+{
+    "name": "kruczek.it/rg-dev-php",
+    "authors": [
+        {
+            "name": "Michal Kruczek",
+            "email": "michal@kruczek.it"
+        }
+    ],
+    "require": {
+        "dg/twitter-php": "^3.6",
+        "grpc/grpc": "^v1.3",
+        "google/protobuf": "^v3.3",
+        "symfony/console": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "": "grpc/",
+            "App\\": "src/"
+        }
+    }
+}
