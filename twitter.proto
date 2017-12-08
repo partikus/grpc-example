@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package Kruczek.RgDev.Twitter;
+
+option java_multiple_files = false;
+option java_package = "it.kruczek.rgdev";
+option java_outer_classname = "RgdevTwitter";
+
+service TwitterBoard {
+    rpc GetTweets(Query) returns (stream Tweet) {}
+}
+
+enum ResultType {
+    MIXED = 0;
+    RECENT = 1;
+    POPULAR = 2;
+}
+message Query {
+    string q = 1;
+    string since = 2;
+    int32 count = 3;
+    string lang = 4;
+    ResultType type = 5;
+}
+
+message Author {
+    string id = 1;
+    string name = 2;
+    string screenName = 3;
+    string avatar = 4;
+}
+
+message Tweet {
+    string id = 1;
+    string text = 2;
+    Author author = 3;
+    int32 retweetCount = 4;
+    int32 favoriteCount = 5;
+}
