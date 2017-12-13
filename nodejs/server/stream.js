@@ -15,15 +15,20 @@ const client = new Twitter({
 
 const service = new TwitterService(client);
 
+setInterval((function(service){
+    "use strict";
+    return () => {
+        console.log(service.getStreams());
+    }
+})(service), 3000);
+
 /**
  * Starts an RPC server that receives requests for the Greeter service at the
  * sample server port
  */
 function main() {
     const server = new grpc.Server();
-    server.addService(services.TwitterBoardService, {
-        getTweets: service.getTweets()
-    });
+    server.addService(services.TwitterBoardService, service);
     server.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
     server.start();
 }

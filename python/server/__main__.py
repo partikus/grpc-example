@@ -20,7 +20,7 @@ auth.set_access_token(settings.get("TWITTER_ACCESS_TOKEN_KEY"), settings.get("TW
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     twitter_pb2_grpc.add_TwitterBoardServicer_to_server(twitterServer.TwitterBoard(auth), server)
-    server.add_insecure_port('[::]:50052')
+    server.add_insecure_port('[::]:50053')
     server.start()
     try:
         while True:

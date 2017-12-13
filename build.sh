@@ -5,9 +5,10 @@ language=${1:-"php"}
 
 echo $language;
 
-docker build -t grpc/php-with-plugin php
+docker build -t grpc/php-plugin php
 docker run -it --rm -w /app/ -v $PWD:/app grpc/node bash nodejs/build.sh
-docker run -it --rm -w /app/ -v $PWD:/app grpc/php-with-plugin bash php/build.sh
+docker run -it --rm -w /app/ -v $PWD:/app grpc/core-php bash php/build.sh
+docker run -it --rm -w /app/ -v $PWD:/app grpc/core-python bash python/build.sh
 
 if [ $language == "php" ]; then
     php_output="php/grpc"

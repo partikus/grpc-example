@@ -7,5 +7,5 @@ rm -rf "$python_output" && mkdir -p "$python_output"
 protoc \
     --python_out="$python_output" \
     --grpc_out="$python_output" \
-    --plugin=protoc-gen-grpc=/home/grpc/bins/opt/grpc_python_plugin \
+    --plugin=protoc-gen-grpc=/usr/local/bin/grpc_python_plugin \
     twitter.proto

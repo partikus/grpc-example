@@ -21,10 +21,8 @@ const service = new TwitterService(client);
  */
 function main() {
     const server = new grpc.Server();
-    server.addService(services.TwitterBoardService, {
-        getTweets: service.getTweets()
-    });
-    server.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
+    server.addService(services.TwitterBoardService, service);
+    server.bind('0.0.0.0:50052', grpc.ServerCredentials.createInsecure());
     server.start();
 }
 

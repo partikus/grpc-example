@@ -41,6 +41,8 @@ python -m grpc_tools.protoc --python_out=python --grpc_python_out=python ../twit
 rm -rf grpc && mkdir grpc
 python -m grpc_tools.protoc -I../ --python_out=grpc --grpc_python_out=grpc ../twitter.proto
 
+python -m grpc_tools.protoc -I../ --python_out=server/grpc --grpc_python_out=server/grpc ../twitter.proto
+
 ```
 
 ## NodeJS 

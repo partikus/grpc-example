@@ -1,9 +1,9 @@
 FROM grpc/core
 
-RUN add-apt-repository ppa:ondrej/php && \
+RUN apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 14AA40EC0831756756D7F66C4F4EA0AAE5267A6C
+    echo "deb http://ppa.launchpad.net/ondrej/php/ubuntu xenial main \ndeb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" >> /etc/apt/sources.list && \
     apt-get update && \
-    apt-get install --yes git && \
-    apt-get install --yes php7.1 php7.1-dev php-pear zlib1g-dev && \
+    apt-get install --yes git php7.1 php7.1-dev php-pear zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
