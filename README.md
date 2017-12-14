@@ -6,7 +6,14 @@ The repository presents a simple Tweeter streaming app that is based on [gRPC](h
 
 The app has been written in 3 popular languages: [php](https://secure.php.net/), [python](https://www.python.org/) and [node](https://nodejs.org/en/).
 
-To simplify the setup you can use [Vagrant](https://www.vagrantup.com/) configuration that was prepared.
+### Docker 
+
+The latest changes bring docker configuration. Instead of using vagrant you can use Docker that is recommended solution.
+More details can be found in [README.md](./docker/README.md) file.
+
+### Vagrant (deprecated)
+
+To simplify the setup you can use [Vagrant](https://www.vagrantup.com/) configuration that was prepared. 
 
 ```bash
 git clone https://github.com/partikus/grpc 
@@ -36,13 +43,7 @@ virtualenv venv
 source venv/bin/activate.fish
 python -m pip install --upgrade pip
 python setup.py install
-python -m pip install grpcio-tools
-python -m grpc_tools.protoc --python_out=python --grpc_python_out=python ../twitter.proto
-rm -rf grpc && mkdir grpc
-python -m grpc_tools.protoc -I../ --python_out=grpc --grpc_python_out=grpc ../twitter.proto
-
-python -m grpc_tools.protoc -I../ --python_out=server/grpc --grpc_python_out=server/grpc ../twitter.proto
-
+python -m pip install -r requirements
 ```
 
 ## NodeJS 
