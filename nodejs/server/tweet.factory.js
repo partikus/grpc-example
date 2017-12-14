@@ -14,6 +14,8 @@ function create(data) {
         author.setScreenname(data.user.screen_name);
         author.setAvatar(data.user.profile_image_url);
     }
+    tweet.setRetweetcount(data.retweet_count);
+    tweet.setFavoritecount(data.favorite_count);
     tweet.setAuthor(author);
     tweet.setText(data.text);
     tweet.setId(data.id_str);

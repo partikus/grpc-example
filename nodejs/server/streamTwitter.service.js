@@ -2,8 +2,9 @@
 
 import Twitter from "twitter";
 import Assert from "assert-js";
-import Factory from "./tweet.factory";
 import log4js from "log4js";
+import Factory from "./tweet.factory";
+
 const logger = log4js.getLogger();
 logger.level = 'debug';
 
@@ -15,6 +16,8 @@ export default class {
         Assert.instanceOf(client, Twitter);
         this.client = client;
         this.streams = new Map;
+        this.isLocked = false;
+        this.lockedAt = null;
     }
 
     /**
@@ -31,6 +34,7 @@ export default class {
     _closeTwitterStream(query) {
         const key = this._getKeyForQuery(query);
         if (this.streams.has(key)) {
+            this.streams.get(key).destroy();
             this.streams.get(key).emit('end');
         }
         logger.debug("Closing Twitter live streaming", key);
@@ -42,6 +46,23 @@ export default class {
         return key;
     }
 
+    _isLocked() {
+        const lockExpired = Date.now() > this.lockedAt;
+        if (this.isLocked && lockExpired) {
+            logger.debug("Streaming has been unlocked");
+            this.isLocked = false;
+            this.lockedAt = null;
+        }
+
+        return this.isLocked;
+    }
+
+    _lock() {
+        const MINUTES_IN_TIMESTAMP = 60 * 1000 * 10;
+        this.isLocked = true;
+        this.lockedAt = Date.now() + MINUTES_IN_TIMESTAMP;
+    }
+
     // * @returns {ServerWriteableStream}
     /**
      * @param {Query} query
@@ -50,19 +71,26 @@ export default class {
      * @private
      */
     _findOrCreateStream(query, params) {
-        logger.debug("Looking for stream", query, params);
+        logger.debug("Looking for stream");
         const _onCreateStream = (resolve, reject) => {
-            const key = this._getKeyForQuery(query);
-            if (this.streams.has(key)) {
-                logger.debug("Stream already exist", key);
-                resolve(this.streams.get(key));
+            if (this._isLocked()) {
+                throw new Error("Streaming is temporary locked");
             }
 
-            const stream = this.client.stream('statuses/filter', params);
-            this.streams.set(key, stream);
-            logger.debug("Stream has been created", key);
+            try {
+                const key = this._getKeyForQuery(query);
+                if (this.streams.has(key)) {
+                    logger.debug("Stream already exist", key);
+                    resolve(this.streams.get(key));
+                }
 
-            resolve(stream);
+                const stream = this.client.stream('statuses/filter', params);
+                this.streams.set(key, stream);
+                logger.debug("Stream has been created", key);
+                resolve(stream);
+            } catch (e) {
+                throw e;
+            }
         };
 
         return new Promise(_onCreateStream)
@@ -97,14 +125,14 @@ export default class {
                 params['follow'] = userIds.join(',');
                 logger.debug("Query params were built", params);
                 resolve(params);
-            });
+            }).catch(error => reject(error));
         };
 
         return new Promise(_promiseCallback);
     }
 
-    _onTweeterStreamData(call, data) {
-        logger.debug("Live streaming - Tweet received", data);
+    _onTwitterStreamData(call, data) {
+        logger.debug("Live streaming - Tweet received");
         try {
             const tweet = Factory.create(data);
             call.write(tweet);
@@ -113,15 +141,16 @@ export default class {
         }
     };
 
-    _onTweeterStreamEnd(call) {
+    _onTwitterStreamEnd(call) {
         /** @type {EventEmitter} stream */
         logger.debug("Live streaming end");
         const key = this._getKeyForQuery(call.request);
+        if (!this.streams.has(key)) {
+            return;
+        }
+
         const stream = this.streams.get(key);
         this.streams.delete(key);
-        if (stream.listenerCount('data') !== 0) {
-            stream.removeAllListeners();
-        }
     };
 
     _onClientCancelled(call) {
@@ -136,6 +165,15 @@ export default class {
         call.end();
     };
 
+    _onTwitterStreamError(call, error) {
+        logger.error("Twitter Streaming error: " + error.message);
+        if (!!error.message.match(/420/i)) {
+            this._lock();
+        }
+        this._closeTwitterStream(call.request);
+        call.end();
+    }
+
     /**
      * @param {EventEmitter} call
      * @param {EventEmitter} stream
@@ -144,15 +182,11 @@ export default class {
     _listen(call, stream) {
         logger.debug("Configuring listeners");
         const query = call.request;
-        const _onTweeterStreamError = (error, query) => {
-            this._closeTwitterStream(query);
-            call.end();
-            throw error;
-        };
 
-        stream.on('data', (data) => this._onTweeterStreamData(call, data));
-        stream.on('error', (error) => _onTweeterStreamError(error, query));
-        stream.on('end', () => this._onTweeterStreamEnd(call));
+        stream.on('data', (data) => this._onTwitterStreamData(call, data));
+        stream.on('error', (error) => this._onTwitterStreamError(call, error));
+        stream.on('end', () => this._onTwitterStreamEnd(call));
+
         call.on('end', () => this._onClientStreamEnd(call));
         call.on('cancelled', () => this._onClientCancelled(call));
     }
@@ -164,17 +198,15 @@ export default class {
         /** @param {Query} query */
         const query = call.request;
 
+        const _onError = (error) => {
+            logger.error(error.message || "An error occured");
+            call.end();
+        };
+
         this
             ._prepareQueryParams(query)
-            .then(params => this._findOrCreateStream(query, params))
-            .catch(error => {
-                logger.error(error);
-                call.end();
-            })
-            .then(stream => this._listen(call, stream))
-            .catch(error => {
-                logger.error(error);
-                call.end();
-            })
+            .then(params => this._findOrCreateStream(query, params), (error) => { throw error })
+            .then(stream => this._listen(call, stream), (error) => { throw error })
+            .catch(_onError)
     }
 }

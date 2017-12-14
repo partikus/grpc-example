@@ -2,9 +2,10 @@
 
 import Twitter from "twitter";
 import Assert from "assert-js";
-import Factory from "./tweet.factory";
 import log4js from "log4js";
+import Factory from "./tweet.factory";
 import messages from "../grpc/twitter_pb";
+
 const logger = log4js.getLogger();
 logger.level = 'debug';
 
@@ -15,10 +16,14 @@ export default class {
     }
 
     _buildQuery(query) {
-        const tracks = query.getTracksList().map(v => "#" + v).join(' OR ');
-        const follows = query.getFollowsList().map(v => "@" + v).join(' OR ');
+        const tracks = "(" + query.getTracksList().map(v => "#" + v).join(' OR ') + ")";
+        const follows = "(" + query.getFollowsList().map(v => "@" + v).join(' OR ') + ")";
 
-        return [tracks, follows].join(' OR ');
+        if (follows.length === 0) {
+            return tracks;
+        }
+
+        return [tracks, follows].join(' AND ');
     }
 
     _getResultType(resultType) {
@@ -61,8 +66,8 @@ export default class {
             .then((response) => this._onTwitterApiData(call, response))
             .then(() => call.end())
             .catch(error => {
+                logger.error(error);
                 call.end();
-                throw error;
             });
     }
 };
