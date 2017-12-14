@@ -11,6 +11,7 @@
     "google-protobuf": "^3.0.0",
     "grpc": "^1.0.0",
     "lodash": "^4.6.1",
+    "log4js": "^2.3.12",
     "minimist": "^1.2.0",
     "twitter": "^1.7.1"
   },
