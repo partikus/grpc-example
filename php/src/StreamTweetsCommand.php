@@ -2,12 +2,8 @@
 
 namespace App;
 
-use Grpc\ChannelCredentials;
-use Grpc\ServerStreamingCall;
 use Kruczek\RgDev\Twitter\Query;
 use Kruczek\RgDev\Twitter\ResultType;
-use Kruczek\RgDev\Twitter\Tweet;
-use Kruczek\RgDev\Twitter\TwitterBoardClient;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,7 +12,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class StreamTweetsCommand extends Command
 {
-
     protected function configure()
     {
         $this
@@ -28,46 +23,35 @@ class StreamTweetsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $lastId = file_get_contents('lastid.txt') ?? 0;
-        $follows = explode(',', $input->getArgument('users'));
+        $lastId = 0;
         $tracks = explode(',', $input->getArgument('tracks'));
+        $follows = empty($input->getArgument('users')) ? [] : explode(',', $input->getArgument('users'));
         $hostname = $input->getOption('hostname');
 
-        $client = new TwitterBoardClient($hostname, ['credentials' => ChannelCredentials::createInsecure()]);
+        $client = new Client($hostname);
+        $cliDecorator = new CliDecorator($output);
 
-        for ($i = 0; $i < 10; $i++) {
-            foreach ($this->loadSince($client, $lastId, $follows, $tracks)->responses() as $response) {
-                $output->writeln($response->getId());
-                if ($lastId < $response->getId()) {
-                    file_put_contents('lastid.txt', $lastId = $response->getId());
+        do {
+            $query = $this->buildQuery($lastId, $follows, $tracks);
+            foreach ($client->getTweets($query) as $tweet) {
+                if ($tweet->getId() > $lastId) {
+                    $lastId = $tweet->getId();
                 }
-                $this->printTweet($response, $output);
-                unset($response);
+                $cliDecorator->decorate($tweet);
+                unset($tweet);
             }
             sleep(5);
-        }
+        } while(true);
     }
 
-    private function printTweet(Tweet $response, OutputInterface $output)
+    private function buildQuery($lastId, $follows, $tracks): Query
     {
-        $message = implode("\t", [
-            mb_substr($response->getId(), 0, 5),
-            $response->getFavoriteCount(),
-            $response->getRetweetCount(),
-            $response->getAuthor()->getScreenName(),
-            $response->getText()
-        ]);
-        $output->writeln($message);
-    }
+        $query = new Query();
+        empty($follows) ?: $query->setFollows($follows);
+        empty($tracks) ?: $query->setTracks($tracks);
+        $query->setSince($lastId);
+        $query->setType(ResultType::RECENT);
 
-    private function loadSince(TwitterBoardClient $client, $lastId, $follows, $tracks): ServerStreamingCall
-    {
-        $request = new Query();
-        empty($follows) ?: $request->setFollows($follows);
-        empty($tracks) ?: $request->setTracks($tracks);
-        $request->setSince($lastId);
-        $request->setType(ResultType::RECENT);
-
-        return $client->GetTweets($request);
+        return $query;
     }
 }
