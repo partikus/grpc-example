@@ -21,6 +21,8 @@ message Query {
     int32 count = 3;
     string lang = 4;
     ResultType type = 5;
+    repeated string tracks = 6;
+    repeated string follows = 7;
 }
 
 message Author {
